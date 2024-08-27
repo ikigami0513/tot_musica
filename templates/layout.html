@@ -1,0 +1,247 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}{% endblock title %} | Tot Musica</title>
+        <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+        <script src="{% static 'tailwind/tailwind.js' %}"></script>
+        <script src="{% static 'tailwind/tailwind.config.js' %}"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const main_content = document.getElementById("main_content");
+                const logo = document.getElementById("logo");
+                const menu_music_link = document.getElementById("menu_music_link");
+                
+                const music_player = document.getElementById("music_player");
+                const current_music_title = document.getElementById("current_music_title");
+                const resume_current_music = document.getElementById("resume_current_music");
+                const pause_current_music = document.getElementById("pause_current_music");
+                const progress_bar = document.getElementById("progress_bar");
+                const current_music_timer = document.getElementById("current_music_timer");
+                const volume_bar = document.getElementById("volume_bar");
+                const speaker_wave_icon = document.getElementById("speaker_wave_icon");
+                const speaker_x_mark_icon = document.getElementById("speaker_x_mark_icon");
+
+                let isDragging = false;
+
+                progress_bar.value = 0;
+                volume_bar.value = 100; // Initialize volume to 100%
+
+                async function load_index() {
+                    const result = await fetch("{% url 'index_view' %}");
+                    if (!result.ok) {
+                        console.log("Failed to load index view.");
+                        return;
+                    }
+            
+                    const data = await result.text();
+                    main_content.innerHTML = data;
+                    document.title = "Accueil | Tot Musica";
+                }
+            
+                async function get_data_music(id) {
+                    const result = await fetch(`{% url 'retrieve_music_data' %}?id=${id}`);
+                    if (!result.ok) {
+                        console.log("Failed to retrieve music data.");
+                        return null;
+                    }
+            
+                    const data = await result.json();
+                    return data;
+                }
+
+                function formatTime(seconds) {
+                    const minutes = Math.floor(seconds / 60);
+                    const secs = Math.floor(seconds % 60);
+                    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                }
+            
+                function updateProgressBar() {
+                    if (music_player.duration) {
+                        const value = (music_player.currentTime / music_player.duration) * 100;
+                        progress_bar.value = value;
+                        current_music_timer.innerHTML = `${formatTime(music_player.currentTime)} / ${formatTime(music_player.duration)}`;
+                    }
+                    requestAnimationFrame(updateProgressBar);
+                }
+            
+                function seekToPosition(event) {
+                    const value = event.target.value;
+                    const newTime = (value / 100) * music_player.duration;
+                    let replay = false;
+                    if (music_player.currentTime === music_player.duration) {
+                        replay = true;
+                    }
+                    music_player.currentTime = newTime;
+                    if (replay) {
+                        music_player.play();
+                    }
+                }
+
+                function adjustVolume(event) {
+                    const value = event.target.value;
+                    music_player.volume = value / 100; // Volume is between 0.0 and 1.0
+                    if (music_player.volume === 0.0) {
+                        speaker_wave_icon.classList.add("hidden");
+                        speaker_x_mark_icon.classList.remove("hidden");
+                    }
+                    else {
+                        speaker_x_mark_icon.classList.add("hidden");
+                        speaker_wave_icon.classList.remove("hidden");
+                    }
+                }
+
+                // Load initial content
+                load_index();
+            
+                logo.addEventListener("click", async function(event) {
+                    event.preventDefault();
+                    await load_index();
+                });
+            
+                menu_music_link.addEventListener("click", async function(event) {
+                    event.preventDefault();
+            
+                    const result = await fetch("{% url 'musics_list_view' %}");
+                    if (!result.ok) {
+                        console.log("Failed to load music list.");
+                        return;
+                    }
+            
+                    const data = await result.text();
+                    main_content.innerHTML = data;
+                    document.title = "Musiques | Tot Musica";
+            
+                    const music_play_buttons = document.querySelectorAll('.play_music');
+                    music_play_buttons.forEach((play_button) => {
+                        play_button.addEventListener("click", async function(event) {
+                            const id = play_button.getAttribute('data-id');
+                            const data = await get_data_music(id);
+            
+                            if (!data.success) {
+                                console.log("Error retrieving music data.");
+                            } else {
+                                const music_data = data.music;
+            
+                                current_music_title.innerHTML = music_data.title;
+                                pause_current_music.classList.remove("hidden");
+                                progress_bar.classList.remove("hidden");
+                                volume_bar.classList.remove("hidden");
+                                speaker_wave_icon.classList.remove("hidden");
+            
+                                music_player.src = music_data.file;
+                                music_player.play();
+                            }
+                        });
+                    });
+                });
+            
+                pause_current_music.addEventListener("click", function(event) {
+                    pause_current_music.classList.add("hidden");
+                    resume_current_music.classList.remove("hidden");
+                    music_player.pause();
+                });
+            
+                resume_current_music.addEventListener("click", function(event) {
+                    resume_current_music.classList.add("hidden");
+                    pause_current_music.classList.remove("hidden");
+                    music_player.play();
+                });
+            
+                music_player.addEventListener("timeupdate", updateProgressBar);
+                progress_bar.addEventListener("input", seekToPosition);
+                volume_bar.addEventListener("input", adjustVolume);
+
+                music_player.addEventListener("ended", function(event) {
+                    pause_current_music.classList.add("hidden");
+                    resume_current_music.classList.remove("hidden");
+                });
+            
+                progress_bar.addEventListener('mousedown', () => {
+                    isDragging = true;
+                });
+            
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        // Update the music player position based on the current value of the progress bar
+                        seekToPosition({ target: progress_bar });
+                    }
+                });
+            
+                progress_bar.addEventListener('mousemove', (event) => {
+                    if (isDragging) {
+                        // Update the progress bar's value based on the mouse position
+                        const rect = progress_bar.getBoundingClientRect();
+                        const x = event.clientX - rect.left;
+                        const value = Math.max(0, Math.min(100, (x / rect.width) * 100));
+                        progress_bar.value = value;
+                        // Update the music player position based on the progress bar's value
+                        seekToPosition({ target: progress_bar });
+                    }
+                });
+            });
+                    
+        </script>
+    </head>
+    <body class="bg-gradient-to-r from-purple-900 to-blue-900 p-4 flex w-full h-screen space-x-4">
+        <div class="bg-gray-900 bg-opacity-40 w-20 rounded-xl flex-none relative">
+            <img src="{% static 'logo.png' %}" class="p-4 mb-4 border-b border-white" id="logo" />
+            <nav class="px-1">
+                <ul class="space-y-2">
+                    <li>
+                        <button class="text-white flex space-x-2 px-4 py-2 rounded-xl hover:bg-gray-700" id="menu_music_link">
+                            <img src="{% static 'icons/music_white.png' %}" title="Musiques" class="w-full" />
+                        </button>
+                    </li>
+                    <li>
+                        <button class="text-white flex space-x-2 px-4 py-2 rounded-xl hover:bg-gray-700">
+                            <img src="{% static 'icons/album_white.png' %}" title="Albums" class="w-full" />
+                        </button>
+                    </li>
+                    <li>
+                        <button class="text-white flex space-x-2 px-4 py-2 rounded-xl hover:bg-gray-700">
+                            <img src="{% static 'icons/artist_white.png' %}" title="Artistes" class="w-full" />
+                        </button>
+                    </li>
+                    <li>
+                        <button class="text-white flex space-x-2 px-4 py-2 rounded-xl hover:bg-gray-700">
+                            <img src="{% static 'icons/gear_white.png' %}" title="Paramètres" class="w-full" />
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="absolute bottom-0 w-full p-2 bg-gray-800 bg-opacity-50 text-center text-white rounded-b-xl">
+                <img src="{{ user.avatar.url }}" class="rounded-full" />
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col space-y-4">
+            <div class="bg-gray-900 bg-opacity-40 rounded-xl flex-1" id="main_content"></div>
+            <div class="bg-gray-900 bg-opacity-40 rounded-xl h-24 p-2">
+                <audio controls src="" id="music_player" class="hidden"></audio>
+                <div class="flex items-center justify-between">
+                    <span id="current_music_title" class="text-xl text-white font-bold"></span>
+                    <div id="buttons_control" class="flex items-center space-x-4">
+                        <button id="resume_current_music" class="hidden text-white">
+                            {% heroicon_solid "play" class="h-8 w-8" %}
+                        </button>
+                        <button id="pause_current_music" class="hidden text-white">
+                            {% heroicon_solid "pause" class="h-8 w-8" %}
+                        </button>
+                        <div class="flex space-x-2 text-white items-center">
+                            {% heroicon_solid "speaker-wave" id="speaker_wave_icon" class="hidden" %}
+                            {% heroicon_solid "speaker-x-mark" id="speaker_x_mark_icon" class="hidden" %}
+                            <input type="range" id="volume_bar" class="hidden" min="0" max="100" step="1" value="100" />
+                        </div>
+                    </div>
+                    <span id="current_music_timer" class="text-xl text-white"></span>
+                </div>
+                <input type="range" id="progress_bar" class="hidden w-full mt-4" min="0" max="100" step="1" value="0" />
+            </div>
+        </div>
+    </body>
+</html>

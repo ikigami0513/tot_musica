@@ -4,4 +4,6 @@ from .models import User
 
 @admin.register(User)
 class UserAdmin(DefaultUserAdmin):
-    pass
+    fieldsets = DefaultUserAdmin.fieldsets + (
+        ('Informations supplémentaires', {'fields': ('avatar',)}),
+    )

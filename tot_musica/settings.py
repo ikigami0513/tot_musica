@@ -24,8 +24,13 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     # Tot Musica Applications
+    'base',
     'authentication',
     'music',
+
+    # Third Party Applications
+    'heroicons',
+    'rest_framework',
 
     # Django Core Applications
     'django.contrib.admin',
@@ -59,6 +64,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+            ],
+            'builtins': [
+                'heroicons.templatetags.heroicons',
             ],
         },
     },

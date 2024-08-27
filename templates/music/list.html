@@ -1,0 +1,37 @@
+<div class="w-full px-8 py-8">
+    <h1 class="text-3xl text-white font-bold text-center mb-8">Liste des Musiques</h1>
+    
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {% for music in musics %}
+            <div class="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                {% if music.picture %}
+                    <img src="{{ music.picture.url }}" alt="Image de {{ music.title }}" class="w-full h-32 object-cover">
+                {% else %}
+                    <div class="bg-gray-300 w-full h-32 flex items-center justify-center">
+                        <span class="text-gray-500">Pas d'image</span>
+                    </div>
+                {% endif %}
+                
+                <div class="p-3">
+                    <h2 class="text-sm font-bold mb-1 truncate">{{ music.title }}</h2>
+                    
+                    <p class="text-gray-700 text-xs mb-2">
+                        <strong>Artistes :</strong> 
+                        {% if music.artists.all %}
+                            {{ music.artists.all|join:", " }}
+                        {% else %}
+                            Inconnu
+                        {% endif %}
+                    </p>
+
+                    <div class="mt-2">
+                        <button class="play_music" data-id="{{music.id}}">
+                            {% heroicon_solid "play" %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
