@@ -5,24 +5,30 @@ from .fields import AudioFileField
 
 def artist_file_path(instance, filename):
     base_filename, file_extension = os.path.splitext(filename)
-    return os.path.join(f"artists/{instance.id}.{uuid.uuid4()}.{file_extension}")
+    return os.path.join(f"artists/{instance.id}.{uuid.uuid4()}{file_extension}")
 
 class Artist(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    picture = models.ImageField(upload_to=artist_file_path, null=True)
+    picture = models.ImageField(upload_to=artist_file_path, null=True, blank=True)
+
+    def __str__(self) -> str:
+        return self.name
 
 class Genre(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=50)
 
+    def __str__(self) -> str:
+        return self.name
+
 def music_song_file_path(instance, filename):
     base_filename, file_extension = os.path.splitext(filename)
-    return os.path.join(f"musics/audio/{instance.id}.{uuid.uuid4()}.{file_extension}")
+    return os.path.join(f"musics/audio/{instance.id}.{uuid.uuid4()}{file_extension}")
 
 def music_picture_file_path(instance, filename):
     base_filename, file_extension = os.path.splitext(filename)
-    return os.path.join(f"musics/picture/{instance.id}.{uuid.uuid4()}.{file_extension}")
+    return os.path.join(f"musics/picture/{instance.id}.{uuid.uuid4()}{file_extension}")
 
 class Music(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -33,9 +39,12 @@ class Music(models.Model):
     genres = models.ManyToManyField(Genre, blank=True, related_name="musics")
     picture = models.ImageField(upload_to=music_picture_file_path, null=True, blank=True)
 
+    def __str__(self) -> str:
+        return self.title
+
 def album_picture_file_path(instance, filename):
     base_filename, file_extension = os.path.splitext(filename)
-    return os.path.join(f"albums/picture/{instance.id}.{uuid.uuid4()}.{file_extension}")
+    return os.path.join(f"albums/picture/{instance.id}.{uuid.uuid4()}{file_extension}")
 
 class Album(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -46,3 +55,6 @@ class Album(models.Model):
     @property
     def artists(self) -> List[Artist]:
         return Artist.objects.filter(musics__albums=self).distinct()
+
+    def __str__(self) -> str:
+        return self.title
